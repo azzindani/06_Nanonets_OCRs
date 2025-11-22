@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from datetime import datetime
 
 from config import settings
-from api.routes import health, ocr, webhook
+from api.routes import health, ocr, webhook, auth
 from api.middleware.auth import verify_api_key
 from api.middleware.rate_limit import rate_limit_middleware
 from utils.logger import api_logger, generate_request_id, set_request_context, clear_request_context
@@ -78,6 +78,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(health.router, prefix=settings.api.api_prefix, tags=["Health"])
+app.include_router(auth.router, prefix=settings.api.api_prefix, tags=["Authentication"])
 app.include_router(ocr.router, prefix=settings.api.api_prefix, tags=["OCR"])
 app.include_router(webhook.router, prefix=settings.api.api_prefix, tags=["Webhooks"])
 

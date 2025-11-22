@@ -1,0 +1,23 @@
+apiVersion: v2
+name: nanonets-ocr
+description: Enterprise OCR system with Vision-Language models
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ocr
+  - document-processing
+  - ai
+  - machine-learning
+maintainers:
+  - name: Nanonets Team
+    email: support@nanonets.com
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
