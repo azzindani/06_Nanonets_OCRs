@@ -66,4 +66,5 @@ data/
 *.png
 *.jpg
 *.jpeg
-!tests/fixtures/*
+!tests/fixtures/**
+!tests/fixtures/outputs/**
