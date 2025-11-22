@@ -20,8 +20,10 @@ except ImportError:
 try:
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Test if it actually works (catches bcrypt compatibility issues)
+    pwd_context.hash("test")
     HAS_PASSLIB = True
-except ImportError:
+except Exception:
     HAS_PASSLIB = False
     pwd_context = None
 
