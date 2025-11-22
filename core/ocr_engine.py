@@ -53,6 +53,16 @@ class OCREngine:
         self._model_manager = get_model_manager(self.model_name)
         self._document_processor = DocumentProcessor()
 
+    def initialize(self):
+        """
+        Pre-load the model and processor.
+        Call this before processing to avoid cold start on first request.
+        """
+        print(f"Loading model: {self.model_name}")
+        self._model_manager.get_model()
+        self._model_manager.get_processor()
+        print("Model and processor loaded successfully")
+
     def _process_single_image(self, image: Image.Image, prompt: str, max_tokens: int) -> str:
         """
         Process a single image through the model.

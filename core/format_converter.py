@@ -97,16 +97,20 @@ class FormatConverter:
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="  ")
 
-    def to_csv(self, tables: List[str]) -> str:
+    def to_csv(self, parsed: ParsedOutput) -> str:
         """
-        Combine multiple CSV tables into a single string.
+        Convert parsed output tables to CSV format.
 
         Args:
-            tables: List of CSV strings.
+            parsed: ParsedOutput object.
 
         Returns:
             Combined CSV string.
         """
+        tables = []
+        for page in parsed.pages:
+            tables.extend(page.tables_csv)
+
         if not tables:
             return "No tables found or could not convert."
 

@@ -444,8 +444,18 @@ def create_gradio_interface():
     return demo
 
 
-def run_ui():
-    """Run the Gradio interface."""
+def run_ui(preload_model: bool = True):
+    """Run the Gradio interface.
+
+    Args:
+        preload_model: If True, initialize model before launching UI.
+    """
+    if preload_model:
+        print("Initializing OCR engine...")
+        engine = get_ocr_engine()
+        engine.initialize()
+        print("OCR engine ready!")
+
     demo = create_gradio_interface()
     demo.launch(
         server_name=settings.ui.server_name,
@@ -461,4 +471,4 @@ if __name__ == "__main__":
     print(f"  Starting UI on {settings.ui.server_name}:{settings.ui.server_port}")
     print("=" * 60)
 
-    run_ui()
+    run_ui(preload_model=True)

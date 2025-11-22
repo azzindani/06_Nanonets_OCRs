@@ -160,15 +160,29 @@ def test_document_processor():
     try:
         from core.document_processor import DocumentProcessor
         from PIL import Image
+        import tempfile
+        import os
 
         processor = DocumentProcessor()
 
-        # Test validation
-        result = processor.validate_file("test.pdf")
-        assert result.is_valid, "PDF should be valid"
+        # Test validation with actual temp files
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
+            temp_pdf = f.name
+            f.write(b'%PDF-1.4 test')
 
-        result = processor.validate_file("test.xyz")
-        assert not result.is_valid, "XYZ should be invalid"
+        with tempfile.NamedTemporaryFile(suffix='.xyz', delete=False) as f:
+            temp_xyz = f.name
+            f.write(b'test')
+
+        try:
+            result = processor.validate_file(temp_pdf)
+            assert result.is_valid, "PDF should be valid"
+
+            result = processor.validate_file(temp_xyz)
+            assert not result.is_valid, "XYZ should be invalid"
+        finally:
+            os.unlink(temp_pdf)
+            os.unlink(temp_xyz)
 
         # Test image resize
         large_img = Image.new('RGB', (3000, 2000), 'white')
