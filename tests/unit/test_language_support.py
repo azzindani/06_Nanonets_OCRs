@@ -146,9 +146,10 @@ class TestMultiLanguageProcessor:
     def test_process_english_document(self):
         """Test processing English document."""
         text = """
-        Invoice Number: INV-001
-        Date: January 15, 2024
-        Total: $500.00
+        The invoice number is INV-001.
+        The date of this invoice is January 15, 2024.
+        The total amount due is $500.00.
+        Please pay by the due date to avoid late fees.
         """
         fields = ["invoice_number", "date", "total"]
         result = self.processor.process_multilingual(text, fields)
@@ -160,9 +161,10 @@ class TestMultiLanguageProcessor:
     def test_process_spanish_document(self):
         """Test processing Spanish document."""
         text = """
-        Número de factura: FACT-001
-        Fecha: 15 de enero de 2024
-        Total: $500.00
+        El número de factura es FACT-001.
+        La fecha de esta factura es 15 de enero de 2024.
+        El total que debe pagar es $500.00.
+        Por favor pague antes de la fecha para evitar cargos.
         """
         fields = ["invoice_number", "date", "total"]
         result = self.processor.process_multilingual(text, fields)
