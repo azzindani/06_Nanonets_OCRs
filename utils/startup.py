@@ -38,19 +38,13 @@ class StartupValidator:
 
     def _validate_required_env_vars(self):
         """Check required environment variables."""
-        required_vars = [
-            ("DATABASE_URL", "PostgreSQL connection string"),
-        ]
-
-        for var_name, description in required_vars:
-            if not os.getenv(var_name):
-                self.errors.append(
-                    f"Missing required env var: {var_name} ({description})"
-                )
+        # No strictly required vars - all have defaults or are optional
+        pass
 
     def _validate_optional_env_vars(self):
         """Check optional but recommended environment variables."""
         optional_vars = [
+            ("DATABASE_URL", "PostgreSQL connection", "Using SQLite fallback"),
             ("JWT_SECRET_KEY", "JWT signing key", "⚠️ Using default - insecure!"),
             ("REDIS_URL", "Redis connection", "Caching disabled"),
             ("S3_ENDPOINT_URL", "S3 storage", "Using local storage"),

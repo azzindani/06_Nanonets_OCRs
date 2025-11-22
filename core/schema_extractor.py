@@ -297,12 +297,14 @@ INVOICE_SCHEMA = {
         "total_amount": {
             "type": "number",
             "description": "Total invoice amount",
-            "minimum": 0
+            "minimum": 0,
+            "pattern": r"(?:total|amount|sum|due)\s*[:\-]?\s*[\$€£]?\s*([\d,]+\.?\d*)"
         },
         "tax_amount": {
             "type": "number",
             "description": "Tax amount",
-            "minimum": 0
+            "minimum": 0,
+            "pattern": r"(?:tax|vat|gst)\s*[:\-]?\s*[\$€£]?\s*([\d,]+\.?\d*)"
         },
         "currency": {
             "type": "string",
