@@ -1,0 +1,143 @@
+# Nanonets OCR Helm Values
+
+replicaCount:
+  api: 2
+  worker: 1
+  ui: 1
+
+image:
+  repository: nanonets-ocr
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+
+# API Configuration
+api:
+  port: 8000
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Worker Configuration (GPU)
+worker:
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+      nvidia.com/gpu: 1
+    limits:
+      memory: "16Gi"
+      cpu: "4000m"
+      nvidia.com/gpu: 1
+
+# UI Configuration
+ui:
+  port: 7860
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+# Service Configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: ocr.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ocr-tls
+      hosts:
+        - ocr.example.com
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Environment Variables
+env:
+  LOG_LEVEL: INFO
+  MODEL_NAME: "nanonets/Nanonets-OCR-s"
+
+# Secrets (override in production)
+secrets:
+  jwtSecret: "change-me-in-production"
+  apiKey: "change-me-in-production"
+
+# PostgreSQL
+postgresql:
+  enabled: true
+  auth:
+    username: nanonets
+    password: nanonets
+    database: nanonets
+  primary:
+    persistence:
+      size: 20Gi
+
+# Redis
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      size: 5Gi
+
+# S3/MinIO
+s3:
+  endpoint: "http://minio:9000"
+  bucket: "nanonets-documents"
+  accessKey: "minioadmin"
+  secretKey: "minioadmin"
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    scrape: true
+    port: 8000
+    path: /metrics
+
+# Persistence
+persistence:
+  modelCache:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+
+# Node Selection
+nodeSelector: {}
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
