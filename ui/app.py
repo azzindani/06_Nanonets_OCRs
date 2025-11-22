@@ -291,10 +291,10 @@ def create_gradio_interface():
 
         # Main tabs for organized UI
         with gr.Tabs():
-            # Tab 1: Upload & Process
-            with gr.TabItem("📤 Upload & Process"):
+            # Tab 1: Process & Results
+            with gr.TabItem("📤 Process & Results"):
                 with gr.Row():
-                    with gr.Column(scale=2):
+                    with gr.Column(scale=1):
                         file_input = gr.File(
                             label="📁 Upload Document",
                             file_types=["image", ".pdf"],
@@ -305,22 +305,53 @@ def create_gradio_interface():
                             label="Processing Time",
                             interactive=False
                         )
-                    with gr.Column(scale=1):
-                        gr.Markdown("""
-                        ### Quick Start
-                        1. Upload a document (PDF or image)
-                        2. Adjust settings in the **Settings** tab
-                        3. Configure API in the **API & Webhooks** tab
-                        4. Click **Process Document**
-                        5. View results in the **Results** tab
 
-                        ### Supported Formats
-                        - Images: JPG, PNG, TIFF, BMP, GIF
-                        - Documents: PDF (multi-page)
-                        """)
+                # Results section
+                with gr.Tabs():
+                    with gr.TabItem("Statistics"):
+                        stats_output = gr.Textbox(label="Processing Statistics", lines=15)
 
-            # Tab 2: Settings
-            with gr.TabItem("⚙️ Settings"):
+                    with gr.TabItem("API Request/Response"):
+                        api_json_viewer = gr.Code(label="API Structure", language="json", lines=20)
+
+                    with gr.TabItem("Webhook Payload"):
+                        webhook_output = gr.Code(label="Webhook Payload", language="json", lines=15)
+
+                    with gr.TabItem("Full OCR Text"):
+                        full_ocr_text = gr.Textbox(label="Extracted Text", lines=20)
+
+                    with gr.TabItem("HTML Preview"):
+                        html_preview = gr.HTML(label="Document Preview")
+
+                    with gr.TabItem("Tables (HTML)"):
+                        html_tables = gr.HTML(label="Extracted Tables")
+
+                    with gr.TabItem("Tables (CSV)"):
+                        csv_tables = gr.Textbox(label="Tables in CSV", lines=12)
+
+                    with gr.TabItem("LaTeX Equations"):
+                        latex_equations = gr.Textbox(label="Equations", lines=8)
+
+                    with gr.TabItem("Image Descriptions"):
+                        image_descriptions = gr.Textbox(label="Images", lines=5)
+
+                    with gr.TabItem("Watermarks"):
+                        watermarks = gr.Textbox(label="Watermarks", lines=5)
+
+                    with gr.TabItem("Page Numbers"):
+                        page_numbers = gr.Textbox(label="Page Numbers", lines=5)
+
+                    with gr.TabItem("Bounding Boxes"):
+                        bbox_image = gr.Image(label="Detection Visualization", type="pil")
+
+                    with gr.TabItem("JSON Output"):
+                        json_output = gr.Code(label="Structured JSON", language="json", lines=20)
+
+                    with gr.TabItem("XML Output"):
+                        xml_output = gr.Code(label="Structured XML", language="html", lines=20)
+
+            # Tab 2: Configuration (Settings + API + Webhooks)
+            with gr.TabItem("⚙️ Configuration"):
                 with gr.Tabs():
                     # General Settings
                     with gr.TabItem("General"):
@@ -364,7 +395,6 @@ def create_gradio_interface():
                         )
 
                         gr.Markdown("### Custom Fields")
-                        gr.Markdown("*Define your own fields to extract from documents*")
                         with gr.Row():
                             custom_field_1 = gr.Textbox(label="Custom 1", placeholder="e.g., Tax ID")
                             custom_field_2 = gr.Textbox(label="Custom 2", placeholder="e.g., Reference")
@@ -378,12 +408,9 @@ def create_gradio_interface():
                             custom_field_9 = gr.Textbox(label="Custom 9")
                             custom_field_10 = gr.Textbox(label="Custom 10")
 
-            # Tab 3: API & Webhooks
-            with gr.TabItem("🔌 API & Webhooks"):
-                with gr.Tabs():
-                    # API Endpoint
-                    with gr.TabItem("Endpoint"):
-                        gr.Markdown("### API Endpoint Configuration")
+                    # API Configuration
+                    with gr.TabItem("API"):
+                        gr.Markdown("### API Endpoint")
                         with gr.Row():
                             api_endpoint = gr.Textbox(
                                 label="API Endpoint URL",
@@ -395,10 +422,7 @@ def create_gradio_interface():
                                 value="POST",
                                 label="HTTP Method"
                             )
-
-                    # Authentication
-                    with gr.TabItem("Authentication"):
-                        gr.Markdown("### API Authentication")
+                        gr.Markdown("### Authentication")
                         api_key = gr.Textbox(
                             label="API Key",
                             type="password",
@@ -416,60 +440,10 @@ def create_gradio_interface():
                             info="URL to receive processing callbacks"
                         )
                         gr.Markdown("""
-                        **Webhook Events:**
-                        - `document.processed` - When OCR completes
-                        - `document.failed` - On processing error
+                        **Webhook Events:** `document.processed`, `document.failed`
 
-                        **Payload includes:**
-                        - Extracted fields and metadata
-                        - Processing time and confidence scores
-                        - HMAC signature for verification
+                        **Payload:** Extracted fields, metadata, processing time, HMAC signature
                         """)
-
-            # Tab 4: Results
-            with gr.TabItem("📊 Results"):
-                with gr.Tabs():
-                    with gr.TabItem("Statistics"):
-                        stats_output = gr.Textbox(label="Processing Statistics", lines=20)
-
-                    with gr.TabItem("API Request/Response"):
-                        api_json_viewer = gr.Code(label="API Structure", language="json", lines=25)
-
-                    with gr.TabItem("Webhook Payload"):
-                        webhook_output = gr.Code(label="Webhook Payload", language="json", lines=20)
-
-                    with gr.TabItem("Full OCR Text"):
-                        full_ocr_text = gr.Textbox(label="Extracted Text", lines=25)
-
-                    with gr.TabItem("HTML Preview"):
-                        html_preview = gr.HTML(label="Document Preview")
-
-                    with gr.TabItem("Tables (HTML)"):
-                        html_tables = gr.HTML(label="Extracted Tables")
-
-                    with gr.TabItem("Tables (CSV)"):
-                        csv_tables = gr.Textbox(label="Tables in CSV", lines=15)
-
-                    with gr.TabItem("LaTeX Equations"):
-                        latex_equations = gr.Textbox(label="Equations", lines=10)
-
-                    with gr.TabItem("Image Descriptions"):
-                        image_descriptions = gr.Textbox(label="Images", lines=5)
-
-                    with gr.TabItem("Watermarks"):
-                        watermarks = gr.Textbox(label="Watermarks", lines=5)
-
-                    with gr.TabItem("Page Numbers"):
-                        page_numbers = gr.Textbox(label="Page Numbers", lines=5)
-
-                    with gr.TabItem("Bounding Boxes"):
-                        bbox_image = gr.Image(label="Detection Visualization", type="pil")
-
-                    with gr.TabItem("JSON Output"):
-                        json_output = gr.Code(label="Structured JSON", language="json", lines=25)
-
-                    with gr.TabItem("XML Output"):
-                        xml_output = gr.Code(label="Structured XML", language="html", lines=25)
 
         # Connect button
         process_button.click(
