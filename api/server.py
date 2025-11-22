@@ -1,5 +1,5 @@
 """
-FastAPI application server.
+FastAPI application server with API versioning.
 """
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +10,7 @@ from config import settings
 from api.routes import health, ocr, webhook
 from api.middleware.auth import verify_api_key
 from api.middleware.rate_limit import rate_limit_middleware
+from utils.logger import api_logger, generate_request_id, set_request_context, clear_request_context
 
 # Create FastAPI app
 app = FastAPI(
@@ -29,6 +30,31 @@ if settings.api.enable_cors:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+# Add request context middleware for logging
+@app.middleware("http")
+async def add_request_context(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or generate_request_id()
+    set_request_context(request_id=request_id)
+
+    api_logger.info(
+        "Request started",
+        method=request.method,
+        path=request.url.path,
+        client=request.client.host if request.client else "unknown"
+    )
+
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+
+    api_logger.info(
+        "Request completed",
+        status_code=response.status_code
+    )
+
+    clear_request_context()
+    return response
 
 
 # Add rate limiting middleware

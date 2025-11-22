@@ -1,0 +1,231 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanonets-ocr-api
+  labels:
+    app: nanonets-ocr
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nanonets-ocr
+      component: api
+  template:
+    metadata:
+      labels:
+        app: nanonets-ocr
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: nanonets-ocr:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nanonets-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nanonets-config
+                  key: redis-url
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nanonets-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanonets-ocr-worker
+  labels:
+    app: nanonets-ocr
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nanonets-ocr
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: nanonets-ocr
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: nanonets-ocr:latest
+          command: ["celery", "-A", "services.celery_app", "worker", "-l", "info", "-Q", "gpu,default"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nanonets-secrets
+                  key: database-url
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: nanonets-config
+                  key: redis-url
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2000m"
+              nvidia.com/gpu: 1
+            limits:
+              memory: "16Gi"
+              cpu: "4000m"
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache-pvc
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nanonets-ocr-api
+  labels:
+    app: nanonets-ocr
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: nanonets-ocr
+    component: api
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nanonets-config
+data:
+  redis-url: "redis://redis:6379/0"
+  log-level: "INFO"
+  model-name: "nanonets/Nanonets-OCR-s"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nanonets-secrets
+type: Opaque
+stringData:
+  database-url: "postgresql://user:password@postgres:5432/nanonets"
+  jwt-secret: "your-secret-key-here"
+  api-key: "your-api-key-here"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nanonets-ocr-api-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nanonets-ocr-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nanonets-ocr-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  rules:
+    - host: ocr.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nanonets-ocr-api
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ocr.example.com
+      secretName: ocr-tls-secret
