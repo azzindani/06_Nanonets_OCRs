@@ -897,6 +897,53 @@ GET /api/v1/health
 
 ---
 
+## Future Roadmap
+
+See [FUTURE_ROADMAP.md](FUTURE_ROADMAP.md) for detailed plans.
+
+### Upcoming Features
+
+**Phase 5: AI-Native Features**
+- Document classification & auto-routing
+- Semantic field extraction with LLM
+- Handwriting recognition
+- Multi-language support (50+ languages)
+
+**Phase 6: Enterprise Intelligence**
+- Advanced analytics dashboard
+- Visual workflow builder
+- 100+ integration connectors
+- PII detection & GDPR compliance
+
+**Phase 7: Scale & Performance**
+- Edge deployment & offline processing
+- TensorRT/ONNX optimization
+- 10,000+ documents/hour throughput
+- Multi-region global deployment
+
+**Phase 8: Platform Ecosystem**
+- SDKs (Python, JS, Java, Go)
+- GraphQL & gRPC APIs
+- Model marketplace
+- White-label solution
+
+### Test Coverage Status
+
+| Component | Status |
+|-----------|--------|
+| Core OCR | ✅ Tested |
+| Document Processor | ✅ Tested |
+| Output Parser | ✅ Tested |
+| Field Extractor | ✅ Tested |
+| API Endpoints | ✅ Tested |
+| Auth Service | ⚠️ Needs Tests |
+| Workflow Engine | ⚠️ Needs Tests |
+| Schema Extractor | ⚠️ Needs Tests |
+
+Run tests: `python -m pytest tests/ -v`
+
+---
+
 ## License
 
 [Add License]
