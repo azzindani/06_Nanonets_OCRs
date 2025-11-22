@@ -114,7 +114,7 @@ class OutputParser:
 
             # Convert to CSV
             try:
-                df = pd.read_html(table_html)[0]
+                df = pd.read_html(io.StringIO(table_html))[0]
                 csv_buffer = io.StringIO()
                 df.to_csv(csv_buffer, index=False)
                 csv_tables.append(csv_buffer.getvalue())
