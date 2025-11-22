@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: admin-password
+            - name: GF_INSTALL_PLUGINS
+              value: "grafana-clock-panel,grafana-piechart-panel"
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/grafana
+            - name: dashboards
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: grafana
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-secrets
+type: Opaque
+stringData:
+  admin-password: "admin123"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+
+  nanonets-dashboard.json: |
+    {
+      "title": "Nanonets OCR Dashboard",
+      "uid": "nanonets-ocr",
+      "panels": [
+        {
+          "title": "Requests Per Second",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "rate(nanonets_requests_total[5m])",
+              "legendFormat": "RPS"
+            }
+          ],
+          "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+        },
+        {
+          "title": "Documents Processed",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "nanonets_documents_processed"
+            }
+          ],
+          "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}
+        },
+        {
+          "title": "Error Rate",
+          "type": "gauge",
+          "targets": [
+            {
+              "expr": "rate(nanonets_requests_failed[5m]) / rate(nanonets_requests_total[5m]) * 100"
+            }
+          ],
+          "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}
+        },
+        {
+          "title": "CPU Usage",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "nanonets_cpu_percent",
+              "legendFormat": "CPU %"
+            }
+          ],
+          "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+        },
+        {
+          "title": "Memory Usage",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "nanonets_memory_percent",
+              "legendFormat": "Memory %"
+            }
+          ],
+          "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+        },
+        {
+          "title": "GPU Memory",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "nanonets_gpu_memory_gb"
+            }
+          ],
+          "gridPos": {"x": 12, "y": 4, "w": 6, "h": 4}
+        }
+      ]
+    }
