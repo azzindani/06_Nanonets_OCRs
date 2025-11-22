@@ -267,36 +267,44 @@ def create_gradio_interface():
 
     with gr.Blocks(theme=gr.themes.Default()) as demo:
         gr.Markdown("""
-        # Nanonets-OCR Document Extractor & API Simulator
+        # 📄 Nanonets-OCR Document Extractor & API Simulator
 
-        **Professional OCR with Real-World API Integration**
+        **Professional OCR with Real-World API Integration Simulation**
 
-        Features:
-        - Realistic API request/response structure
-        - Webhook callback simulation
-        - Multiple output formats
-        - Processing statistics
+        This tool provides enterprise-grade OCR with comprehensive API simulation features including:
+        - ✅ Realistic API request/response structure
+        - ✅ Webhook callback simulation
+        - ✅ Batch processing support
+        - ✅ Confidence scoring
+        - ✅ Multiple output formats
+        - ✅ Processing statistics and analytics
+
+        **Optimized for 16GB VRAM** | Processing time and detailed statistics included
         """)
 
         with gr.Row():
             with gr.Column(scale=2):
                 file_input = gr.File(
-                    label="Upload Document",
-                    file_types=["image", ".pdf"]
+                    label="📁 Upload Document",
+                    file_types=["image", ".pdf"],
+                    interactive=True
                 )
             with gr.Column(scale=1):
-                gr.Markdown("### Processing Settings")
+                gr.Markdown("### ⚙️ Processing Settings")
                 max_tokens_slider = gr.Slider(
                     minimum=500, maximum=6000, step=250, value=2048,
-                    label="Max Tokens"
+                    label="Max Tokens",
+                    interactive=True
                 )
                 max_image_size_slider = gr.Slider(
                     minimum=512, maximum=2048, step=128, value=1536,
-                    label="Max Image Size (px)"
+                    label="Max Image Size (px)",
+                    interactive=True
                 )
 
         # API Configuration
-        with gr.Accordion("API Configuration", open=True):
+        with gr.Accordion("🔌 API Configuration", open=True):
+            gr.Markdown("### Configure your API endpoint and authentication")
             with gr.Row():
                 api_endpoint = gr.Textbox(
                     label="API Endpoint URL",
@@ -335,7 +343,7 @@ def create_gradio_interface():
                 )
 
         # Field Extraction
-        with gr.Accordion("Field Extraction Configuration", open=False):
+        with gr.Accordion("🎯 Field Extraction Configuration", open=False):
             field_checkboxes = gr.CheckboxGroup(
                 choices=PREDEFINED_FIELDS,
                 label="Predefined Fields",
@@ -358,7 +366,7 @@ def create_gradio_interface():
                 custom_field_9 = gr.Textbox(label="Custom 9")
                 custom_field_10 = gr.Textbox(label="Custom 10")
 
-        process_button = gr.Button("Process Document", variant="primary", size="lg")
+        process_button = gr.Button("🚀 Process Document", variant="primary", size="lg")
 
         with gr.Row():
             processing_time_display = gr.Textbox(
