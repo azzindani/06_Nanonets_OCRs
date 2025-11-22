@@ -1,13 +1,15 @@
 """
 FastAPI application server.
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from datetime import datetime
 
 from config import settings
-from api.routes import health, ocr
+from api.routes import health, ocr, webhook
+from api.middleware.auth import verify_api_key
+from api.middleware.rate_limit import rate_limit_middleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -29,6 +31,12 @@ if settings.api.enable_cors:
     )
 
 
+# Add rate limiting middleware
+@app.middleware("http")
+async def add_rate_limiting(request: Request, call_next):
+    return await rate_limit_middleware(request, call_next)
+
+
 # Exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -45,6 +53,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Include routers
 app.include_router(health.router, prefix=settings.api.api_prefix, tags=["Health"])
 app.include_router(ocr.router, prefix=settings.api.api_prefix, tags=["OCR"])
+app.include_router(webhook.router, prefix=settings.api.api_prefix, tags=["Webhooks"])
 
 
 # Root endpoint
