@@ -6,7 +6,7 @@ from io import BytesIO
 from unittest.mock import patch, MagicMock
 from PIL import Image
 
-from api.main import app
+from api.server import app
 from fastapi.testclient import TestClient
 
 
