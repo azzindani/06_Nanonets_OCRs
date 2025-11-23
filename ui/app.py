@@ -121,7 +121,7 @@ def process_document_for_ui(file, max_new_tokens, max_image_size,
 
     if file is None:
         return ("Error: No file provided.", "0:00:00", "", "", "", "", "",
-                "", "", "", "", None, "", "", "")
+                "", "", "", "", None, "", "", "", "")
 
     try:
         # Get OCR engine and process
@@ -134,7 +134,7 @@ def process_document_for_ui(file, max_new_tokens, max_image_size,
         if not result.pages or not result.pages[0].success:
             error_msg = result.pages[0].error_message if result.pages else "Unknown error"
             return (f"Error: {error_msg}", "0:00:00", "", "", "", "", "",
-                    "", "", "", "", None, "", "", "")
+                    "", "", "", "", None, "", "", "", "")
 
         # Parse structured data
         parser = OutputParser()
@@ -213,22 +213,39 @@ def process_document_for_ui(file, max_new_tokens, max_image_size,
         field_results = extractor.extract(ocr_text, enabled_fields, custom_fields)
         api_data = extractor.to_dict(field_results)
 
-        # API request/response
+        # API v1 request/response
         total_ms = int((time.time() - process_start) * 1000)
         api_request = generate_api_request(
             api_endpoint, api_key, api_method, api_data,
             webhook_url, confidence_threshold, output_format
         )
         api_request["response"]["processing_time_ms"] = total_ms
-        api_json = json.dumps(api_request, indent=2)
+        api_v1_json = json.dumps(api_request, indent=2)
 
-        # Webhook payload (always generate sample)
+        # API v2 request/response (structured output format)
+        request_id = str(uuid.uuid4())
+        api_v2_response = {
+            "api_version": "2.0",
+            "job_id": request_id,
+            "status": "completed",
+            "processing_time_ms": total_ms,
+            "document": {
+                "filename": result.metadata.filename,
+                "file_size_mb": result.metadata.file_size_mb,
+                "file_type": result.metadata.file_type,
+                "total_pages": result.metadata.total_pages
+            },
+            "result": structured_result
+        }
+        api_v2_json = json.dumps(api_v2_response, indent=2)
+
+        # Webhook payload using real extracted data
         webhook_payload = {
             "event": "document.processed",
             "event_id": str(uuid.uuid4()),
             "timestamp": datetime.now().isoformat(),
             "webhook_url": webhook_url if webhook_url else "https://api.example.com/webhooks/ocr",
-            "request_id": api_request["request"]["request_id"],
+            "request_id": request_id,
             "status": "completed",
             "delivery": {
                 "attempt": 1,
@@ -236,17 +253,19 @@ def process_document_for_ui(file, max_new_tokens, max_image_size,
                 "status": "delivered" if webhook_url else "simulated"
             },
             "data": {
-                "document_id": api_request["request"]["request_id"],
-                "extracted_fields": api_data,
+                "document_id": request_id,
+                "document_type": structured_result['document_type'],
+                "language": structured_result['language'],
+                "extracted_fields": structured_result['extracted_fields'],
+                "line_items": structured_result['line_items'],
+                "entities": structured_result['entities'][:10],  # Limit for readability
                 "metadata": {
                     "pages": result.metadata.total_pages,
                     "processing_time_ms": total_ms,
-                    "confidence": round(sum(
-                        0.85 + (hash(f) % 15) / 100 for f in api_data.keys()
-                    ) / max(len(api_data), 1), 2)
+                    "confidence": structured_result['confidence']
                 }
             },
-            "signature": f"sha256={hashlib.sha256(str(api_data).encode()).hexdigest()[:32]}"
+            "signature": f"sha256={hashlib.sha256(json.dumps(structured_result['extracted_fields']).encode()).hexdigest()[:32]}"
         }
         webhook_json = json.dumps(webhook_payload, indent=2)
 
@@ -288,11 +307,11 @@ Content Detection:
         return (ocr_text, processing_time, full_html, html_tables,
                 csv_output, equations_output, images_str,
                 watermarks_str, page_nums_str, json_output, xml_output,
-                bbox_image, api_json, webhook_json, stats_output)
+                bbox_image, api_v1_json, api_v2_json, webhook_json, stats_output)
 
     except Exception as e:
         return (f"Error: {str(e)}", "0:00:00", "", "", "", "", "",
-                "", "", "", "", None, "", "", "")
+                "", "", "", "", None, "", "", "", "")
 
 
 def create_gradio_interface():
@@ -330,7 +349,10 @@ def create_gradio_interface():
                         stats_output = gr.Textbox(label="Processing Statistics", lines=15)
 
                     with gr.TabItem("API Request/Response"):
-                        api_json_viewer = gr.Code(label="API Structure", language="json", lines=20)
+                        gr.Markdown("### API v1 Response (Legacy Format)")
+                        api_v1_viewer = gr.Code(label="API v1 - Field Extraction", language="json", lines=15)
+                        gr.Markdown("### API v2 Response (Structured Output)")
+                        api_v2_viewer = gr.Code(label="API v2 - Enhanced Structured", language="json", lines=20)
 
                     with gr.TabItem("Webhook Payload"):
                         webhook_output = gr.Code(label="Webhook Payload", language="json", lines=15)
@@ -517,7 +539,7 @@ def create_gradio_interface():
                 html_tables, csv_tables, latex_equations,
                 image_descriptions, watermarks, page_numbers,
                 json_output, xml_output, bbox_image,
-                api_json_viewer, webhook_output, stats_output
+                api_v1_viewer, api_v2_viewer, webhook_output, stats_output
             ]
         )
 

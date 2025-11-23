@@ -377,6 +377,92 @@ async def extract_entities(
     }
 
 
+@router.post("/v2/ocr")
+async def process_document_v2(
+    file: UploadFile = File(...),
+    max_tokens: int = Form(default=2048),
+    webhook_url: Optional[str] = Form(default=None)
+):
+    """
+    API v2 - Process document with enhanced structured output.
+
+    Returns clean, structured format optimized for downstream processing.
+    Includes document classification, field extraction, entities, and line items.
+
+    Args:
+        file: Document file (PDF or image)
+        max_tokens: Maximum tokens for generation
+        webhook_url: Optional webhook URL for callback
+
+    Returns:
+        Structured output with extracted fields as key-value pairs.
+    """
+    job_id = str(uuid.uuid4())
+    start_time = time.time()
+
+    filename = file.filename or "document"
+    extension = os.path.splitext(filename)[1].lower()
+
+    supported = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.pdf']
+    if extension not in supported:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {extension}"
+        )
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        # Process with OCR
+        engine = get_ocr_engine()
+        result = engine.process_document(tmp_path, max_tokens=max_tokens)
+
+        # Parse to get tables
+        parser = OutputParser()
+        parsed = parser.parse(result.total_text)
+
+        tables_html = []
+        for page in parsed.pages:
+            tables_html.extend(page.tables_html)
+
+        # Get structured output
+        processor = get_structured_processor()
+        structured = processor.process(result.total_text, tables_html)
+
+        # Calculate processing time
+        processing_time_ms = int((time.time() - start_time) * 1000)
+
+        # Build v2 response
+        response = {
+            "api_version": "2.0",
+            "job_id": job_id,
+            "status": "completed",
+            "processing_time_ms": processing_time_ms,
+            "document": {
+                "filename": filename,
+                "file_size_mb": round(len(content) / (1024 * 1024), 3),
+                "file_type": extension.upper().replace('.', ''),
+                "total_pages": result.metadata.total_pages
+            },
+            "result": structured
+        }
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 @router.post("/structured")
 async def get_structured_output(
     file: UploadFile = File(...),

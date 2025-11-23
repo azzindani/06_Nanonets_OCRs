@@ -119,13 +119,20 @@ class StructuredOutputProcessor:
                     r"#\s*(\d+)",
                 ],
                 "bill_to": [
-                    r"Bill\s+To\s*:?\s*\*?\*?\s*([A-Za-z\s]+?)(?:\n|Ship)",
+                    r"Bill\s+To\s*:?\s*\*?\*?([^*\n]+?)(?:\n\n|\nShip)",
+                    r"Bill\s+To\s*:?\s*\*?\*?\s*([A-Za-z][A-Za-z\s]+?)(?:\n|Ship)",
                 ],
                 "ship_to": [
                     r"Ship\s+To\s*:?\s*\*?\*?\s*([^\n]+)",
                 ],
                 "subtotal": [
                     r"Subtotal\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "discount": [
+                    r"Discount\s*(?:\([^)]+\))?\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "tax": [
+                    r"Tax\s*(?:\([^)]+\))?\s*:?\s*\$?([\d,]+\.?\d*)",
                 ],
                 "shipping": [
                     r"Shipping\s*:?\s*\$?([\d,]+\.?\d*)",

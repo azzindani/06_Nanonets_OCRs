@@ -42,6 +42,13 @@ class SemanticExtractor:
 
     def _build_entity_patterns(self) -> Dict[str, List[str]]:
         """Build patterns for entity extraction."""
+        # Common document labels to exclude from person detection
+        self._person_exclusions = {
+            'bill to', 'ship to', 'sold to', 'deliver to', 'ship mode', 'second class',
+            'first class', 'standard class', 'balance due', 'amount due', 'total due',
+            'grand total', 'sub total', 'thank you', 'terms and', 'notes and',
+            'order id', 'invoice number', 'receipt number', 'customer id',
+        }
         return {
             "person": [
                 r"\b[A-Z][a-z]+\s+[A-Z][a-z]+\b",  # Names
@@ -135,6 +142,14 @@ class SemanticExtractor:
             for pattern in patterns:
                 matches = re.findall(pattern, text)
                 for match in matches:
+                    # Filter out false positives for person entities
+                    if entity_type == "person":
+                        match_lower = match.lower()
+                        if match_lower in self._person_exclusions:
+                            continue
+                        # Also skip if it contains common product words
+                        if any(word in match_lower for word in ['inkjet', 'laser', 'printer', 'machine', 'class']):
+                            continue
                     entities.append({
                         "type": entity_type,
                         "value": match,
