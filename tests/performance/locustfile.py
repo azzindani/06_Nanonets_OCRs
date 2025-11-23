@@ -93,6 +93,65 @@ class OCRUser(HttpUser):
         """Process a large test image."""
         self._process_image("large")
 
+    @task(3)
+    def process_image_v2(self):
+        """Process image with API v2 (structured output)."""
+        self._process_image_v2("small")
+
+    @task(2)
+    def classify_document(self):
+        """Classify document type."""
+        image_data = self._test_images[0][1]  # small image
+        files = {
+            "file": ("test.png", io.BytesIO(image_data), "image/png")
+        }
+        with self.client.post(
+            "/api/v1/classify",
+            files=files,
+            headers={"X-API-Key": self.api_key},
+            catch_response=True
+        ) as response:
+            if response.status_code in [200, 422]:
+                response.success()
+            else:
+                response.failure(f"Classify failed: {response.status_code}")
+
+    @task(2)
+    def detect_language(self):
+        """Detect document language."""
+        image_data = self._test_images[0][1]
+        files = {
+            "file": ("test.png", io.BytesIO(image_data), "image/png")
+        }
+        with self.client.post(
+            "/api/v1/detect-language",
+            files=files,
+            headers={"X-API-Key": self.api_key},
+            catch_response=True
+        ) as response:
+            if response.status_code in [200, 422]:
+                response.success()
+            else:
+                response.failure(f"Detect language failed: {response.status_code}")
+
+    @task(1)
+    def get_structured_output(self):
+        """Get fully structured output."""
+        image_data = self._test_images[1][1]  # medium image
+        files = {
+            "file": ("test.png", io.BytesIO(image_data), "image/png")
+        }
+        with self.client.post(
+            "/api/v1/structured",
+            files=files,
+            headers={"X-API-Key": self.api_key},
+            catch_response=True
+        ) as response:
+            if response.status_code == 200:
+                response.success()
+            else:
+                response.failure(f"Structured failed: {response.status_code}")
+
     def _process_image(self, size: str):
         """Process an image of the given size."""
         # Find image by size
@@ -127,6 +186,47 @@ class OCRUser(HttpUser):
                 response.failure("Rate limited")
             else:
                 response.failure(f"OCR failed: {response.status_code}")
+
+    def _process_image_v2(self, size: str):
+        """Process an image with API v2."""
+        image_data = None
+        for name, data in self._test_images:
+            if name == size:
+                image_data = data
+                break
+
+        if not image_data:
+            return
+
+        files = {
+            "file": (f"test_{size}.png", io.BytesIO(image_data), "image/png")
+        }
+        data = {
+            "max_tokens": 1024
+        }
+
+        with self.client.post(
+            "/api/v1/v2/ocr",
+            files=files,
+            data=data,
+            headers={"X-API-Key": self.api_key},
+            catch_response=True,
+            name=f"/api/v1/v2/ocr [{size}]"
+        ) as response:
+            if response.status_code == 200:
+                # Verify v2 response structure
+                try:
+                    json_resp = response.json()
+                    if "api_version" in json_resp and json_resp["api_version"] == "2.0":
+                        response.success()
+                    else:
+                        response.failure("Invalid v2 response structure")
+                except Exception:
+                    response.failure("Invalid JSON response")
+            elif response.status_code == 429:
+                response.failure("Rate limited")
+            else:
+                response.failure(f"OCR v2 failed: {response.status_code}")
 
     @task(2)
     def get_models(self):
