@@ -353,10 +353,18 @@ def create_gradio_interface():
 
     # Custom CSS to make file upload text smaller
     custom_css = """
-    .file-upload .wrap {
+    /* Target Gradio file upload component */
+    [data-testid="file"] .upload-button,
+    [data-testid="file"] span,
+    .upload-button,
+    #component-0 .wrap span {
+        font-size: 11px !important;
+    }
+    [data-testid="file"] {
         min-height: 50px !important;
     }
-    .file-upload span, .file-upload .upload-button {
+    /* General upload area text */
+    .wrap.svelte-1ipelgc span {
         font-size: 11px !important;
     }
     """
