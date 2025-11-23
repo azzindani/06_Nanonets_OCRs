@@ -359,9 +359,6 @@ def create_gradio_interface():
     .small-upload button {
         font-size: 9px !important;
     }
-    .small-upload {
-        min-height: 40px !important;
-    }
     """
 
     with gr.Blocks(theme=gr.themes.Default(), css=custom_css) as demo:
@@ -381,7 +378,6 @@ def create_gradio_interface():
                             label="Upload Document",
                             file_types=["image", ".pdf"],
                             interactive=True,
-                            height=60,
                             elem_classes=["small-upload"]
                         )
                     with gr.Column(scale=1):
