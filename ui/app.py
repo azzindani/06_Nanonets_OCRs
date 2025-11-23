@@ -314,84 +314,42 @@ Content Detection:
                 "", "", "", "", None, "", "", "", "")
 
 
-def create_sample_images():
-    """Create sample document images for examples."""
+def get_sample_documents():
+    """Get sample document paths from tests/asset directory."""
     import os
-    import tempfile
-    from PIL import ImageDraw, ImageFont
+
+    # Get path to tests/asset directory
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    asset_dir = os.path.join(base_dir, "tests", "asset")
 
     samples = []
-    sample_dir = tempfile.mkdtemp()
+    sample_names = []
 
-    # Sample 1: Invoice
-    invoice_img = Image.new('RGB', (400, 300), color='white')
-    draw = ImageDraw.Draw(invoice_img)
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
-        font_bold = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
-    except:
-        font = ImageFont.load_default()
-        font_bold = font
+    if os.path.exists(asset_dir):
+        # Select a variety of sample documents
+        sample_files = [
+            ("invoice1.pdf", "Invoice PDF"),
+            ("docparsing_example1.jpg", "Document 1"),
+            ("docparsing_example2.jpg", "Document 2"),
+            ("ocr_example1.jpg", "OCR Example 1"),
+            ("ocr_example2.jpg", "OCR Example 2"),
+            ("docparsing_example3.jpg", "Document 3"),
+        ]
 
-    draw.text((150, 10), "INVOICE", fill='black', font=font_bold)
-    draw.text((10, 40), "Invoice #: 12345", fill='black', font=font)
-    draw.text((10, 60), "Date: Jan 15, 2024", fill='black', font=font)
-    draw.text((10, 90), "Bill To: John Smith", fill='black', font=font)
-    draw.text((10, 120), "Item: Product A    Qty: 2    $100.00", fill='black', font=font)
-    draw.text((10, 150), "Item: Product B    Qty: 1    $50.00", fill='black', font=font)
-    draw.text((10, 190), "Subtotal: $150.00", fill='black', font=font)
-    draw.text((10, 210), "Tax: $12.00", fill='black', font=font)
-    draw.text((10, 240), "Total: $162.00", fill='black', font=font_bold)
+        for filename, name in sample_files:
+            filepath = os.path.join(asset_dir, filename)
+            if os.path.exists(filepath):
+                samples.append(filepath)
+                sample_names.append(name)
 
-    invoice_path = os.path.join(sample_dir, "sample_invoice.png")
-    invoice_img.save(invoice_path)
-    samples.append(invoice_path)
-
-    # Sample 2: Receipt
-    receipt_img = Image.new('RGB', (300, 400), color='white')
-    draw = ImageDraw.Draw(receipt_img)
-    draw.text((100, 10), "RECEIPT", fill='black', font=font_bold)
-    draw.text((80, 35), "SuperStore", fill='black', font=font)
-    draw.text((10, 70), "Receipt #: R-98765", fill='black', font=font)
-    draw.text((10, 90), "Date: Jan 15, 2024", fill='black', font=font)
-    draw.text((10, 120), "Coffee         $4.50", fill='black', font=font)
-    draw.text((10, 140), "Sandwich       $8.00", fill='black', font=font)
-    draw.text((10, 160), "Cookie         $2.50", fill='black', font=font)
-    draw.text((10, 200), "Subtotal:     $15.00", fill='black', font=font)
-    draw.text((10, 220), "Tax:           $1.20", fill='black', font=font)
-    draw.text((10, 250), "Total:        $16.20", fill='black', font=font_bold)
-    draw.text((10, 290), "Paid: Credit Card", fill='black', font=font)
-    draw.text((50, 340), "Thank you!", fill='black', font=font)
-
-    receipt_path = os.path.join(sample_dir, "sample_receipt.png")
-    receipt_img.save(receipt_path)
-    samples.append(receipt_path)
-
-    # Sample 3: ID Document
-    id_img = Image.new('RGB', (400, 250), color='#f5f5f5')
-    draw = ImageDraw.Draw(id_img)
-    draw.rectangle([(5, 5), (395, 245)], outline='black', width=2)
-    draw.text((130, 15), "DRIVER LICENSE", fill='black', font=font_bold)
-    draw.text((20, 50), "Name: Jane Doe", fill='black', font=font)
-    draw.text((20, 75), "DOB: 05/20/1990", fill='black', font=font)
-    draw.text((20, 100), "License #: D1234567", fill='black', font=font)
-    draw.text((20, 125), "Address: 123 Main St", fill='black', font=font)
-    draw.text((20, 150), "City: New York, NY 10001", fill='black', font=font)
-    draw.text((20, 185), "Exp: 05/20/2028", fill='black', font=font)
-    draw.text((20, 210), "Class: C", fill='black', font=font)
-
-    id_path = os.path.join(sample_dir, "sample_id.png")
-    id_img.save(id_path)
-    samples.append(id_path)
-
-    return samples
+    return samples, sample_names
 
 
 def create_gradio_interface():
     """Create and return the Gradio interface."""
 
-    # Create sample images
-    sample_images = create_sample_images()
+    # Get sample documents
+    sample_images, sample_names = get_sample_documents()
 
     with gr.Blocks(theme=gr.themes.Default()) as demo:
         gr.Markdown("""
@@ -421,15 +379,14 @@ def create_gradio_interface():
                         process_button = gr.Button("Process Document", variant="primary", size="lg")
 
                 # Sample documents
-                gr.Markdown("**Sample Documents** - Click to load:")
-                with gr.Row():
-                    for i, sample_path in enumerate(sample_images):
-                        sample_names = ["Invoice", "Receipt", "ID Card"]
-                        gr.Examples(
-                            examples=[[sample_path]],
-                            inputs=[file_input],
-                            label=sample_names[i] if i < len(sample_names) else f"Sample {i+1}"
-                        )
+                if sample_images:
+                    gr.Markdown("**Sample Documents** - Click to load:")
+                    gr.Examples(
+                        examples=[[path] for path in sample_images],
+                        inputs=[file_input],
+                        examples_per_page=6,
+                        label="Sample Documents"
+                    )
 
                 # Results section
                 with gr.Tabs():
