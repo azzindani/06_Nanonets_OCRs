@@ -351,7 +351,17 @@ def create_gradio_interface():
     # Get sample documents
     sample_images, sample_names = get_sample_documents()
 
-    with gr.Blocks(theme=gr.themes.Default()) as demo:
+    # Custom CSS to make file upload text smaller
+    custom_css = """
+    .file-upload .wrap {
+        min-height: 50px !important;
+    }
+    .file-upload span, .file-upload .upload-button {
+        font-size: 11px !important;
+    }
+    """
+
+    with gr.Blocks(theme=gr.themes.Default(), css=custom_css) as demo:
         gr.Markdown("""
         # Nanonets-OCR Document Extractor & API Simulator
 
