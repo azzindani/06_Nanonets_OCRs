@@ -175,6 +175,92 @@ class StructuredOutputProcessor:
                     r"effective\s+(?:date)?\s*:?\s*([^\n]+)",
                 ],
             },
+            DocumentType.BANK_STATEMENT: {
+                "account_number": [
+                    r"(?:Account|Acct)\s*#?\s*:?\s*([X\d\-]+)",
+                    r"Account\s+Number\s*:?\s*([^\n]+)",
+                ],
+                "statement_period": [
+                    r"(?:Statement\s+Period|Period)\s*:?\s*([^\n]+)",
+                ],
+                "opening_balance": [
+                    r"(?:Opening|Beginning)\s+Balance\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "closing_balance": [
+                    r"(?:Closing|Ending)\s+Balance\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "total_deposits": [
+                    r"(?:Total\s+)?Deposits\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "total_withdrawals": [
+                    r"(?:Total\s+)?Withdrawals\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+            },
+            DocumentType.ID_DOCUMENT: {
+                "document_number": [
+                    r"(?:ID|License|Passport)\s*#?\s*:?\s*([A-Z0-9\-]+)",
+                    r"(?:Number|No\.?)\s*:?\s*([A-Z0-9\-]+)",
+                ],
+                "full_name": [
+                    r"(?:Name|Full\s+Name)\s*:?\s*([A-Za-z\s]+)",
+                ],
+                "date_of_birth": [
+                    r"(?:DOB|Date\s+of\s+Birth|Birth\s+Date)\s*:?\s*([^\n]+)",
+                ],
+                "expiration_date": [
+                    r"(?:Exp|Expires?|Expiration)\s*:?\s*([^\n]+)",
+                ],
+                "issue_date": [
+                    r"(?:Issued?|Issue\s+Date)\s*:?\s*([^\n]+)",
+                ],
+                "address": [
+                    r"(?:Address|Addr)\s*:?\s*([^\n]+)",
+                ],
+            },
+            DocumentType.MEDICAL: {
+                "patient_name": [
+                    r"(?:Patient|Name)\s*:?\s*([A-Za-z\s]+)",
+                ],
+                "patient_id": [
+                    r"(?:Patient|Medical)\s*(?:ID|#)\s*:?\s*([^\n]+)",
+                    r"MRN\s*:?\s*([^\n]+)",
+                ],
+                "provider": [
+                    r"(?:Provider|Physician|Doctor)\s*:?\s*([^\n]+)",
+                ],
+                "diagnosis": [
+                    r"(?:Diagnosis|Dx)\s*:?\s*([^\n]+)",
+                ],
+                "visit_date": [
+                    r"(?:Visit|Service)\s+Date\s*:?\s*([^\n]+)",
+                ],
+                "facility": [
+                    r"(?:Facility|Hospital|Clinic)\s*:?\s*([^\n]+)",
+                ],
+            },
+            DocumentType.TAX_DOCUMENT: {
+                "tax_year": [
+                    r"(?:Tax\s+Year|Year)\s*:?\s*(\d{4})",
+                ],
+                "form_type": [
+                    r"Form\s+(\d+[A-Z\-]*)",
+                ],
+                "taxpayer_name": [
+                    r"(?:Taxpayer|Name)\s*:?\s*([^\n]+)",
+                ],
+                "ssn": [
+                    r"(?:SSN|Social\s+Security)\s*:?\s*([X\d\-]+)",
+                ],
+                "gross_income": [
+                    r"(?:Gross\s+Income|Total\s+Income)\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "tax_due": [
+                    r"(?:Tax\s+Due|Amount\s+Owed)\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+                "refund": [
+                    r"(?:Refund|Amount\s+Refunded)\s*:?\s*\$?([\d,]+\.?\d*)",
+                ],
+            },
         }
 
         # Extract common fields
