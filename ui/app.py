@@ -378,6 +378,7 @@ def create_gradio_interface():
                             label="Upload Document",
                             file_types=["image", ".pdf"],
                             interactive=True,
+                            height=118,
                             elem_classes=["small-upload"]
                         )
                     with gr.Column(scale=1):
