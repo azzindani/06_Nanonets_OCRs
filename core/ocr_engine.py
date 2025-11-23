@@ -96,7 +96,15 @@ class OCREngine:
                 padding=True,
                 return_tensors="pt"
             )
-            inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+            # Get the device - handle device_map="auto" case
+            if hasattr(model, 'device'):
+                device = model.device
+            else:
+                # For models with device_map="auto", use cuda:0
+                device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+            inputs = {k: v.to(device) for k, v in inputs.items()}
 
             with torch.no_grad():
                 output_ids = model.generate(
