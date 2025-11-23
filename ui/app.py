@@ -353,19 +353,14 @@ def create_gradio_interface():
 
     # Custom CSS to make file upload text smaller
     custom_css = """
-    /* Target Gradio file upload component */
-    [data-testid="file"] .upload-button,
-    [data-testid="file"] span,
-    .upload-button,
-    #component-0 .wrap span {
-        font-size: 11px !important;
+    /* Target file upload with custom class */
+    .small-upload span,
+    .small-upload .upload-button,
+    .small-upload button {
+        font-size: 9px !important;
     }
-    [data-testid="file"] {
-        min-height: 50px !important;
-    }
-    /* General upload area text */
-    .wrap.svelte-1ipelgc span {
-        font-size: 11px !important;
+    .small-upload {
+        min-height: 40px !important;
     }
     """
 
@@ -386,7 +381,8 @@ def create_gradio_interface():
                             label="Upload Document",
                             file_types=["image", ".pdf"],
                             interactive=True,
-                            height=100
+                            height=60,
+                            elem_classes=["small-upload"]
                         )
                     with gr.Column(scale=1):
                         processing_time_display = gr.Textbox(
