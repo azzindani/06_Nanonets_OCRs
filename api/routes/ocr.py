@@ -6,7 +6,7 @@ import time
 import uuid
 import tempfile
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 
@@ -521,3 +521,101 @@ async def get_structured_output(
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+
+@router.post("/ocr/batch")
+async def process_batch(
+    files: List[UploadFile] = File(...),
+    max_tokens: int = Form(default=2048)
+):
+    """
+    Process multiple documents in batch.
+
+    Args:
+        files: List of document files (PDF or images)
+        max_tokens: Maximum tokens for generation per document
+
+    Returns:
+        Batch processing results with structured output for each document.
+    """
+    batch_id = str(uuid.uuid4())
+    start_time = time.time()
+
+    if not files:
+        raise HTTPException(
+            status_code=400,
+            detail="No files provided"
+        )
+
+    if len(files) > 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 10 files per batch"
+        )
+
+    results = []
+    supported = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.pdf']
+
+    for file in files:
+        filename = file.filename or "document"
+        extension = os.path.splitext(filename)[1].lower()
+
+        if extension not in supported:
+            results.append({
+                "filename": filename,
+                "status": "error",
+                "error": f"Unsupported file type: {extension}"
+            })
+            continue
+
+        # Save file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        try:
+            # Process with OCR
+            engine = get_ocr_engine()
+            result = engine.process_document(tmp_path, max_tokens=max_tokens)
+
+            # Parse and get structured output
+            parser = OutputParser()
+            parsed = parser.parse(result.total_text)
+
+            tables_html = []
+            for page in parsed.pages:
+                tables_html.extend(page.tables_html)
+
+            processor = get_structured_processor()
+            structured = processor.process(result.total_text, tables_html)
+
+            results.append({
+                "filename": filename,
+                "status": "completed",
+                "result": structured
+            })
+
+        except Exception as e:
+            results.append({
+                "filename": filename,
+                "status": "error",
+                "error": str(e)
+            })
+
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    # Calculate total processing time
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    return {
+        "batch_id": batch_id,
+        "status": "completed",
+        "total_files": len(files),
+        "successful": sum(1 for r in results if r["status"] == "completed"),
+        "failed": sum(1 for r in results if r["status"] == "error"),
+        "processing_time_ms": processing_time_ms,
+        "results": results
+    }
