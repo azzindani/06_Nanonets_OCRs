@@ -21,7 +21,7 @@ class ModelConfig:
 class ProcessingConfig:
     """Processing configuration settings."""
     max_image_size: int = 1536
-    max_tokens: int = 2048
+    max_tokens: int = 4096  # Increased for OCR2-3B model
     default_dpi: int = 150
     supported_image_formats: List[str] = field(default_factory=lambda: [
         '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'

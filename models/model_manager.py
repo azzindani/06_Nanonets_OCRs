@@ -67,22 +67,32 @@ class ModelManager:
                 # Determine load parameters based on quantization
                 load_kwargs = {
                     "device_map": "auto",
-                    "attn_implementation": "eager",
                     "low_cpu_mem_usage": True,
+                    "torch_dtype": "auto",  # Let model decide optimal dtype
                 }
 
-                if self._hardware_config.torch_dtype == "float16":
-                    load_kwargs["torch_dtype"] = torch.float16
-
+                # Add quantization if specified
                 if self._hardware_config.quantization == "8bit":
                     load_kwargs["load_in_8bit"] = True
                 elif self._hardware_config.quantization == "4bit":
                     load_kwargs["load_in_4bit"] = True
 
-                self._model = AutoModelForImageTextToText.from_pretrained(
-                    self.model_name,
-                    **load_kwargs
-                )
+                # Try flash_attention_2 first, then eager
+                try:
+                    load_kwargs["attn_implementation"] = "flash_attention_2"
+                    self._model = AutoModelForImageTextToText.from_pretrained(
+                        self.model_name,
+                        **load_kwargs
+                    )
+                    print("Using flash_attention_2")
+                except Exception as attn_error:
+                    # Fallback to eager attention if flash_attention_2 fails
+                    print(f"Flash attention not available, using eager: {attn_error}")
+                    load_kwargs["attn_implementation"] = "eager"
+                    self._model = AutoModelForImageTextToText.from_pretrained(
+                        self.model_name,
+                        **load_kwargs
+                    )
 
                 torch.cuda.empty_cache()
                 memory_used = torch.cuda.memory_allocated(0) / (1024 ** 3)
