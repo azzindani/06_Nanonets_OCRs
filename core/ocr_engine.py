@@ -102,14 +102,13 @@ class OCREngine:
                 output_ids = model.generate(
                     **inputs,
                     max_new_tokens=max_tokens,
-                    do_sample=False
+                    do_sample=False,
+                    use_cache=True
                 )
 
-            # Correct slicing for OCR2-3B model
-            generated_ids = [
-                output_ids[len(input_ids):]
-                for input_ids, output_ids in zip(inputs['input_ids'], output_ids)
-            ]
+            # Slice output to get only generated tokens
+            input_ids_length = inputs['input_ids'].shape[1]
+            generated_ids = [output_ids[0, input_ids_length:]]
             output_text = processor.batch_decode(
                 generated_ids,
                 skip_special_tokens=True,
