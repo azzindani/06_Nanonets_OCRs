@@ -114,14 +114,28 @@ class OCREngine:
                     use_cache=True
                 )
 
+            # Debug: print shapes
+            print(f"DEBUG: output_ids shape: {output_ids.shape}")
+            print(f"DEBUG: input_ids shape: {inputs['input_ids'].shape}")
+
             # Slice output to get only generated tokens
             input_ids_length = inputs['input_ids'].shape[1]
-            generated_ids = [output_ids[0, input_ids_length:]]
+
+            # Handle different output shapes
+            if len(output_ids.shape) == 2:
+                generated_ids = [output_ids[0, input_ids_length:]]
+            else:
+                generated_ids = [output_ids[input_ids_length:]]
+
+            print(f"DEBUG: generated_ids length: {generated_ids[0].shape}")
+
             output_text = processor.batch_decode(
                 generated_ids,
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=True
             )[0]
+
+            print(f"DEBUG: output_text: '{output_text[:100]}...' (len={len(output_text)})")
 
             del inputs, output_ids, generated_ids
             clear_memory()
