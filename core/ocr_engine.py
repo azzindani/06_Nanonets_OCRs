@@ -120,12 +120,7 @@ class OCREngine:
 
             # Slice output to get only generated tokens
             input_ids_length = inputs['input_ids'].shape[1]
-
-            # Handle different output shapes
-            if len(output_ids.shape) == 2:
-                generated_ids = [output_ids[0, input_ids_length:]]
-            else:
-                generated_ids = [output_ids[input_ids_length:]]
+            generated_ids = [output_ids[0, input_ids_length:]]
 
             print(f"DEBUG: generated_ids length: {generated_ids[0].shape}")
 
