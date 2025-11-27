@@ -5,7 +5,7 @@ import torch
 from typing import Optional, Tuple, Any
 from dataclasses import dataclass
 
-from transformers import AutoTokenizer, AutoProcessor, AutoModelForImageTextToText, Qwen2_5_VLForConditionalGeneration
+from transformers import AutoTokenizer, AutoProcessor, AutoModelForImageTextToText
 
 from models.hardware_detection import detect_hardware, clear_memory, set_memory_optimizations, HardwareConfig
 
@@ -64,32 +64,31 @@ class ModelManager:
             if device == "cuda":
                 print(f"[{device}] CUDA available. Loading with optimizations.")
 
-                # Check if this is an OCR2 model (Qwen-based)
-                is_ocr2_model = "OCR2" in self.model_name or "Qwen" in self.model_name
+                # Determine load parameters based on quantization
+                load_kwargs = {
+                    "device_map": "auto",
+                    "low_cpu_mem_usage": True,
+                    "torch_dtype": "auto",  # Let model decide optimal dtype
+                }
 
-                if is_ocr2_model:
-                    # OCR2-3B requires bfloat16 without quantization for best results
-                    print(f"[{device}] Loading Qwen-based OCR2 model with bfloat16")
-                    self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                # Add quantization if specified
+                if self._hardware_config.quantization == "8bit":
+                    load_kwargs["load_in_8bit"] = True
+                elif self._hardware_config.quantization == "4bit":
+                    load_kwargs["load_in_4bit"] = True
+
+                # Try flash_attention_2 first, then eager
+                try:
+                    load_kwargs["attn_implementation"] = "flash_attention_2"
+                    self._model = AutoModelForImageTextToText.from_pretrained(
                         self.model_name,
-                        torch_dtype=torch.bfloat16,
-                        device_map="auto",
-                        low_cpu_mem_usage=True
+                        **load_kwargs
                     )
-                else:
-                    # Standard loading for other models
-                    load_kwargs = {
-                        "device_map": "auto",
-                        "low_cpu_mem_usage": True,
-                        "torch_dtype": torch.float16,
-                    }
-
-                    # Add quantization if specified
-                    if self._hardware_config.quantization == "8bit":
-                        load_kwargs["load_in_8bit"] = True
-                    elif self._hardware_config.quantization == "4bit":
-                        load_kwargs["load_in_4bit"] = True
-
+                    print("Using flash_attention_2")
+                except Exception as attn_error:
+                    # Fallback to eager attention if flash_attention_2 fails
+                    print(f"Flash attention not available, using eager: {attn_error}")
+                    load_kwargs["attn_implementation"] = "eager"
                     self._model = AutoModelForImageTextToText.from_pretrained(
                         self.model_name,
                         **load_kwargs
