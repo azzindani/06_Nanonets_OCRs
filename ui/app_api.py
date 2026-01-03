@@ -13,9 +13,87 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import gradio as gr
 import json
 import os
+import re
 from datetime import datetime
+from PIL import Image, ImageDraw, ImageFont
 
 from ui.api_client import get_api_client, OCRAPIClient
+
+
+def create_bounding_box_visualization(image: Image.Image, ocr_text: str) -> Image.Image:
+    """Create visualization with bounding boxes for detected elements."""
+    img_with_boxes = image.copy()
+    draw = ImageDraw.Draw(img_with_boxes)
+
+    try:
+        # Try common font paths
+        font_paths = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc"
+        ]
+        font = None
+        for path in font_paths:
+            if os.path.exists(path):
+                font = ImageFont.truetype(path, 14)
+                break
+        if font is None:
+            font = ImageFont.load_default()
+    except:
+        font = ImageFont.load_default()
+
+    colors = {
+        'table': (255, 0, 0),      # Red
+        'equation': (0, 255, 0),    # Green
+        'image': (0, 0, 255),       # Blue
+        'watermark': (255, 255, 0), # Yellow
+        'text': (128, 128, 128),    # Gray
+    }
+
+    width, height = img_with_boxes.size
+    y_offset = 10
+
+    # Draw indicators for detected elements
+    from bs4 import BeautifulSoup
+
+    # Check for tables
+    soup = BeautifulSoup(ocr_text, 'html.parser')
+    if soup.find_all('table') or '<table' in ocr_text.lower():
+        draw.rectangle([(10, y_offset), (width - 10, y_offset + 40)],
+                       outline=colors['table'], width=3)
+        draw.text((15, y_offset + 5), "📊 Table Detected", fill=colors['table'], font=font)
+        y_offset += 50
+
+    # Check for equations (LaTeX style)
+    if re.search(r'\$\$[^$]+\$\$|\$[^$]+\$|\\begin\{equation\}', ocr_text):
+        draw.rectangle([(10, y_offset), (width - 10, y_offset + 40)],
+                       outline=colors['equation'], width=3)
+        draw.text((15, y_offset + 5), "🔢 Equation Detected", fill=colors['equation'], font=font)
+        y_offset += 50
+
+    # Check for images
+    if re.search(r'<img>.*?</img>|\[Image:', ocr_text, re.IGNORECASE):
+        draw.rectangle([(10, y_offset), (width - 10, y_offset + 40)],
+                       outline=colors['image'], width=3)
+        draw.text((15, y_offset + 5), "🖼️ Image Detected", fill=colors['image'], font=font)
+        y_offset += 50
+
+    # Check for watermarks
+    if re.search(r'watermark|confidential|draft|sample', ocr_text, re.IGNORECASE):
+        draw.rectangle([(10, y_offset), (width - 10, y_offset + 40)],
+                       outline=colors['watermark'], width=3)
+        draw.text((15, y_offset + 5), "💧 Watermark Detected", fill=colors['watermark'], font=font)
+        y_offset += 50
+
+    # Draw border around entire document
+    draw.rectangle([(2, 2), (width - 2, height - 2)], outline=colors['text'], width=2)
+
+    # Add info text at bottom
+    info_text = f"Document: {width}x{height}px | OCR Text: {len(ocr_text):,} chars"
+    draw.text((10, height - 25), info_text, fill=colors['text'], font=font)
+
+    return img_with_boxes
+
 
 # Predefined fields (same as original)
 PREDEFINED_FIELDS = [
@@ -214,8 +292,45 @@ def process_document_via_api(
     </extracted_fields>
 </document>"""
 
-        # Bounding box visualization (not available via API)
+        # Bounding box visualization - load the uploaded file
         bbox_image = None
+        try:
+            file_ext = os.path.splitext(file.name)[1].lower()
+            
+            if file_ext in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']:
+                # Load image directly
+                uploaded_image = Image.open(file.name)
+                if uploaded_image.mode != 'RGB':
+                    uploaded_image = uploaded_image.convert('RGB')
+                bbox_image = create_bounding_box_visualization(uploaded_image, ocr_text)
+                
+            elif file_ext == '.pdf':
+                # Try to extract first page from PDF as image
+                try:
+                    import fitz  # PyMuPDF
+                    pdf_doc = fitz.open(file.name)
+                    if len(pdf_doc) > 0:
+                        page = pdf_doc[0]
+                        # Render at 150 DPI for good quality
+                        mat = fitz.Matrix(150/72, 150/72)
+                        pix = page.get_pixmap(matrix=mat)
+                        # Convert to PIL Image
+                        uploaded_image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        bbox_image = create_bounding_box_visualization(uploaded_image, ocr_text)
+                    pdf_doc.close()
+                except ImportError:
+                    # PyMuPDF not available, create a placeholder
+                    placeholder = Image.new('RGB', (800, 600), color=(245, 245, 245))
+                    draw = ImageDraw.Draw(placeholder)
+                    draw.text((50, 280), "PDF Preview: Install PyMuPDF for visualization", fill=(100, 100, 100))
+                    bbox_image = placeholder
+        except Exception as e:
+            # If visualization fails, create error placeholder
+            placeholder = Image.new('RGB', (800, 100), color=(255, 240, 240))
+            draw = ImageDraw.Draw(placeholder)
+            draw.text((10, 40), f"Visualization error: {str(e)[:60]}", fill=(200, 0, 0))
+            bbox_image = placeholder
+
 
         # API v1 request/response (simulated from v2 data)
         api_v1_json = json.dumps({
